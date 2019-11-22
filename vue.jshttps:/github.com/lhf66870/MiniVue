@@ -1,0 +1,187 @@
+function Vue () {
+  this.$data = {
+    a: 1
+  }
+  this.el = document.querySelector('#app')
+  this._html = ''
+  this.observe(this.$data)
+  this.render()
+}
+
+/*
+  ! vue defineProperty 实现双向绑定
+*/
+
+Vue.prototype.observe = function (obj) {
+  var value
+  var self = this
+  for (const key in obj) {
+    if (obj.hasOwnProperty(key)) {
+      value = obj[key]
+      if (typeof value === 'object') {
+        this.observe(value)
+      } else {
+        Object.defineProperty(this.$data, key, {
+          get: function () {
+            return value
+          },
+          set: function (newVal) {
+            value = newVal
+            self.render()
+          }
+        })
+      }
+    }
+  }
+}
+
+/*
+  ! vue Proxy 实现双向绑定
+*/
+// Vue.prototype.observe = function (obj) {
+//   var self = this
+//   this.$data = new Proxy(this.$data, {
+//     get:  (target, key) => {
+//       return target[key]
+//     },
+//     set:  (target, key, newVal) => {
+//       target[key] = newVal
+//       self.render()
+//     }
+//   })
+// }
+
+Vue.prototype.render = function () {
+  this._html = `I am ${this.$data.a}`
+  this.el.innerHTML = this._html
+}
+
+/*
+  ! vue 对数组监听的特殊处理
+*/
+// var arraypro = Array.prototype
+// var arrayop = Object.create(arraypro)
+
+// var arr = ["push", "pop", "shift"]
+// // arr 里的方法，既能保持原有方法，又能触发更新
+// // 装饰者模式
+// arr.forEach(function(method, index){
+//   arrayob[method] = function(){
+//     var ret = arraypro[method].apply(this, arguments);
+//     console.log('检测到数组变动，触发更新')
+//     return ret
+//   }
+// })
+
+// var arr = []
+// arr._proto_ = arrayob;
+// arr.push(1)
+
+/*
+  ! Proxy 初级使用
+*/
+
+// var ob = {
+//   a:1,
+//   b:2
+// }
+// // ! 注意：使用 Proxy 后不能再去操作原对象
+// ob = new Proxy(ob, {
+//   // receive => new Proxy()
+//   get: (target, key, receive) => {
+//     console.log(target, key)
+//     return target[key]
+//   },
+//   set: (target, key, newValue, receive) => {
+//     console.log(target, key, newValue)
+//     target[key] = newValue
+//   }
+// })
+
+/*
+  ! proxy 实现 数据校验
+*/
+
+// const personValidator = {
+//   name (val) {
+//     return typeof val === 'string'
+//   },
+//   age (val) {
+//     return typeof val === 'number' && val > 18
+//   }
+// }
+
+// let createValidator = (target, validator) => {
+//   return new Proxy(target, {
+//     // target 增加_validator属性，方便后续使用
+//     _validator: validator,
+//     set(target, key, value, proxy) {
+//       if(target.hasOwnProperty(key)){
+//         let validator = this._validator[key]
+//         if(!validator(value)){
+//           throw Error('type error')
+//         } else {
+//           return Reflect.set(target, key, value, value, proxy)
+//         }
+//       }
+//     }
+//   })
+// }
+
+// class Person {
+//   constructor(name, age){
+//     this.name = name
+//     this.age = age
+//     return createValidator(this, personValidator)
+//   }
+// }
+
+// let wbd = new Person('王八蛋', 29)
+
+/*
+ ! proxy实现私有变量
+*/
+
+// //此为定义Proxy的第二个参数，劫持原对象的get和set方法
+// const protectHandler = {    
+//   //target为目标对象， key为成员变量
+//   get (target, key) {  
+//     console.log(target)  
+//     // 调用isProtected判断是否合法
+//     isProtected(key, 'get')  
+//     //如果合法会运行此步，返回目标对象中的成员变量
+//     return target[key]   
+//   },
+//    //value为要给成员变量设置的值
+//   set (target, key, value) {   
+//     isProtected(key, 'set')
+//     //如果合法会运行此步，设置变量值为value
+//     target[key] = value  
+//     return true  
+//   }
+// }
+
+// //判断是否合法的函数
+// let isProtected = (key, action) => {    
+//   //规定：如果成员变量名以"_"开头，就视为私有的，抛出异常阻止操作
+//   if (key[0] === '_') {    
+//       throw new Error(`Invalid attempt to ${action} private "${key}" property`);
+//   }
+// }
+
+// class Student {
+//   constructor (name, age, id) {
+//     this._id = id
+//     this.name = name
+//     this. age = age
+//   }
+// }
+
+// //实例化一个对象
+// const personData = new Student('123', 15, 5); 
+
+// //给yourObj对象添加protectHandler劫持，在set和get时遇到以"_"开头的私有变量名就报错
+// const JVM = new Proxy(personData, protectHandler);
+
+// JVM.name
+// JVM._id = 12
